@@ -547,6 +547,16 @@ function sortRows(rows) {
   return rows.slice().sort((a, b) => a.start - b.start || a.name.localeCompare(b.name));
 }
 
+function tag(name) {
+  return '@' + name.replace(/ /g, '_');
+}  
+
+parts.push(sec + '\n\n' + items.map(r => r.shift + ' ' + tag(r.name)).join('\n'));
+
+parts.push('Next day shifts\n\nMED\n\n' + next.map(r => r.shift + ' ' + tag(r.name)).join('\n'));
+
+parts.push(sec + '\n' + items.map(r => r.shift + ' ' + tag(r.name)).join('\n'));  
+
 function buildMainText() {
   const today = sortRows((data1 || []).filter(r => r.start >= 480));
   const parts = [];
