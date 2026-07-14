@@ -24,7 +24,6 @@
   --accent-text: #0a0a0a;
   --success: #6ec88a;
   --danger: #e06060;
-  --input-bg: rgba(24, 22, 19, 0.72);
   --glass-blur: blur(20px) saturate(180%);
   --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.16);
   --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
@@ -48,7 +47,6 @@
   --accent-text: #ffffff;
   --success: #27704a;
   --danger: #c0392b;
-  --input-bg: rgba(255, 255, 255, 0.75);
   --glass-blur: blur(22px) saturate(165%);
   --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(60, 50, 70, 0.05);
   --glass-shadow: 0 12px 34px rgba(70, 60, 90, 0.2);
@@ -235,6 +233,15 @@ body::after {
   font-weight: 600;
   margin-bottom: 20px;
 }
+.waiting {
+  display: none;
+  text-align: center;
+  padding: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
 
 .results { display: none; }
 
@@ -268,7 +275,6 @@ body::after {
 
 .pane { display: none; }
 .pane.active { display: block; animation: fadeUp 0.35s ease; }
-.pane.locked > * { display: none; }
 
 .toolbar {
   display: flex;
@@ -300,65 +306,6 @@ body::after {
 .btn:active { transform: translateY(0) scale(0.97); }
 .btn.copied { background: var(--success); border-color: var(--success); color: #fff; }
 .btn.failed { background: var(--danger); border-color: var(--danger); color: #fff; }
-.btn-ghost.failed { border-color: var(--danger); color: var(--danger); background: transparent; }
-.waiting {
-  display: none;
-  text-align: center;
-  padding: 18px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-.roster-help {
-  padding: 16px 20px 0;
-  font-size: 11.5px;
-  line-height: 1.9;
-  color: var(--muted);
-  font-weight: 400;
-}
-.roster-help code {
-  font-family: "DM Mono", monospace;
-  font-size: 10.5px;
-  color: var(--accent);
-  background: var(--accent-dim);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-.roster-input {
-  display: block;
-  width: 100%;
-  min-height: 260px;
-  margin-top: 12px;
-  padding: 14px 20px 18px;
-  border: none;
-  border-top: 1px solid var(--border);
-  background: var(--input-bg);
-  color: var(--text);
-  font-family: "DM Mono", monospace;
-  font-size: 11.5px;
-  line-height: 1.8;
-  resize: vertical;
-  outline: none;
-}
-.unmatched-head {
-  padding: 14px 20px 0;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--danger);
-}
-.unmatched-list {
-  font-family: "DM Mono", monospace;
-  font-size: 12px;
-  line-height: 1.75;
-  white-space: pre-wrap;
-  padding: 8px 20px 16px;
-}
-.output a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent-border); }
-.output a:hover { border-bottom-style: solid; }
-.hourblock pre a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent-border); }
 .btn-ghost {
   background: transparent;
   border-color: var(--border2);
@@ -368,6 +315,7 @@ body::after {
 }
 .btn-ghost:hover { color: var(--text); border-color: var(--accent-border); }
 .btn-ghost.copied { border-color: var(--success); color: var(--success); background: transparent; }
+.btn-ghost.failed { border-color: var(--danger); color: var(--danger); background: transparent; }
 
 .glass-card {
   position: relative;
@@ -466,7 +414,6 @@ body::after {
     <div class="tabs">
       <button class="tab active" data-pane="main">Shift Message</button>
       <button class="tab" data-pane="hourly">Hourly Breakdown</button>
-      <button class="tab" data-pane="roster" id="rosterTab">Roster</button>
     </div>
 
     <div class="pane active" id="pane-main">
@@ -484,37 +431,9 @@ body::after {
       </div>
       <div id="hourlyOut"></div>
     </div>
-
-    <div class="pane" id="pane-roster">
-      <div class="toolbar">
-        <span class="count" id="rosterCount"></span>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn btn-ghost" id="importClip">Import From Clipboard</button>
-          <button class="btn btn-ghost" id="applyRoster">Apply</button>
-          <button class="btn btn-primary" id="downloadSite">Download Site With Roster Saved ✦</button>
-        </div>
-      </div>
-      <div class="glass-card" style="margin-bottom:12px;">
-        <div class="roster-help">
-          One person per line. Paste lines straight from your old Slack messages, both formats work:<br>
-          <code>[@Davit Modebadze](https://wolt.enterprise.slack.com/team/U08G33J7WJH)</code><br>
-          <code>Davit Modebadze | https://wolt.enterprise.slack.com/team/U08G33J7WJH</code><br>
-          If the schedule name differs from the Slack display name, put the schedule name first:<br>
-          <code>Barbare Gelashvili | [@Barbb](https://wolt.enterprise.slack.com/team/U08KYH2KQ5S)</code>
-        </div>
-        <textarea id="rosterText" class="roster-input" spellcheck="false" placeholder="[@Name](https://wolt.enterprise.slack.com/team/U...)"></textarea>
-      </div>
-      <div class="glass-card" id="unmatchedCard" style="display:none;">
-        <div class="unmatched-head">Not in roster from last upload · shown as plain @Name_Surname</div>
-        <pre id="unmatchedList" class="unmatched-list"></pre>
-      </div>
-    </div>
   </div>
 </div>
 
-<script type="application/json" id="roster-data">
-[]
-</script>
 <script>
 const CATEGORIES = {
   'SSC - SHL - MED': 'SHL',
@@ -536,6 +455,10 @@ document.getElementById('themeBtn').addEventListener('click', () => {
 
 function norm(s) {
   return String(s || '').replace(/\s+/g, ' ').trim();
+}
+
+function tag(name) {
+  return '@' + name.replace(/ /g, '_');
 }
 
 function parseStart(shift) {
@@ -626,105 +549,22 @@ function sortRows(rows) {
   return rows.slice().sort((a, b) => a.start - b.start || a.name.localeCompare(b.name));
 }
 
-function tag(name) {
-  return '@' + name.replace(/ /g, '_');
-}
-
-/* ---------- Roster: schedule name -> Slack profile link ---------- */
-const PAGE_SOURCE = '<!doctype html>\n' + document.documentElement.outerHTML;
-let roster = [];            // [{ key, display, url }]
-let rosterIndex = new Map(); // normalized key -> entry
-let lastUnmatched = new Set();
-
-function normKey(s) {
-  return norm(s).toLowerCase().replace(/_/g, ' ');
-}
-
-function parseRosterLine(line) {
-  line = line.trim();
-  if (!line) return null;
-  // formats:
-  //   [@Display](url)
-  //   Schedule Name | [@Display](url)
-  //   Schedule Name | url
-  //   Schedule Name | Display | url
-  const md = /\[@?([^\]]+)\]\((https?:\/\/[^\s)]+)\)/.exec(line);
-  if (md) {
-    const display = norm(md[1]);
-    let before = norm(line.slice(0, md.index).replace(/[|,;]+\s*$/, ''));
-    // drop shift times so full lines from old messages can be pasted as-is
-    before = norm(before.replace(/\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/g, ''));
-    return { key: before || display, display, url: md[2] };
-  }
-  const parts = line.split(/\s*[|;]\s*|\s*,\s*/).map(norm).filter(Boolean);
-  if (parts.length >= 2) {
-    const url = parts[parts.length - 1];
-    if (!/^https?:\/\//.test(url)) return null;
-    if (parts.length === 2) return { key: parts[0], display: parts[0], url };
-    return { key: parts[0], display: parts[1].replace(/^@/, ''), url };
-  }
-  // "Name https://..." with just a space
-  const sp = /^(.*?)\s+(https?:\/\/\S+)$/.exec(line);
-  if (sp && norm(sp[1])) return { key: norm(sp[1]).replace(/^@/, ''), display: norm(sp[1]).replace(/^@/, ''), url: sp[2] };
-  return null;
-}
-
-function applyRoster() {
-  const lines = document.getElementById('rosterText').value.split('\n');
-  roster = [];
-  rosterIndex = new Map();
-  for (const line of lines) {
-    const e = parseRosterLine(line);
-    if (!e) continue;
-    roster.push(e);
-    rosterIndex.set(normKey(e.key), e);
-    if (normKey(e.display) !== normKey(e.key) && !rosterIndex.has(normKey(e.display))) {
-      rosterIndex.set(normKey(e.display), e);
-    }
-  }
-  document.getElementById('rosterCount').textContent = roster.length + ' people in roster';
-  render();
-}
-
-function lookup(name) {
-  return rosterIndex.get(normKey(name)) || null;
-}
-
-// text for copying: markdown link if in roster, plain underscore tag if not
-function personText(name) {
-  const e = lookup(name);
-  if (e) return '[@' + e.display + '](' + e.url + ')';
-  lastUnmatched.add(name);
-  return tag(name);
-}
-
-// html for the on-page preview
-function personHtml(name) {
-  const e = lookup(name);
-  if (e) return '<a href="' + escapeHtml(e.url) + '" target="_blank" rel="noopener">@' + escapeHtml(e.display) + '</a>';
-  lastUnmatched.add(name);
-  return escapeHtml(tag(name));
-}
-
-
-function buildMain(fmt) {
-  const esc = fmt === personHtml ? escapeHtml : (s => s);
+function buildMainText() {
   const today = sortRows((data1 || []).filter(r => r.start >= 480));
   const parts = [];
   for (const sec of SECTION_ORDER) {
     const items = today.filter(r => r.cat === sec);
     if (!items.length) continue;
-    parts.push(sec + '\n\n' + items.map(r => esc(r.shift) + ' ' + fmt(r.name)).join('\n'));
+    parts.push(sec + '\n\n' + items.map(r => r.shift + ' ' + tag(r.name)).join('\n'));
   }
   if (data2) {
     const next = sortRows(data2.filter(r => r.start < 480));
     if (next.length) {
-      parts.push('Next day shifts\n\nMED\n\n' + next.map(r => esc(r.shift) + ' ' + fmt(r.name)).join('\n'));
+      parts.push('Next day shifts\n\nMED\n\n' + next.map(r => r.shift + ' ' + tag(r.name)).join('\n'));
     }
   }
   return parts.join('\n\n');
 }
-function buildMainText() { return buildMain(personText); }
 
 function buildHourGroups() {
   const today = sortRows((data1 || []).filter(r => r.start >= 480)).map(r => ({ ...r, sortKey: r.start }));
@@ -739,17 +579,15 @@ function buildHourGroups() {
   return [...groups.values()].sort((a, b) => a.sortKey - b.sortKey);
 }
 
-function buildHour(g, fmt) {
-  const esc = fmt === personHtml ? escapeHtml : (s => s);
+function buildHourText(g) {
   const parts = [];
   for (const sec of SECTION_ORDER) {
     const items = g.rows.filter(r => r.cat === sec).sort((a, b) => a.name.localeCompare(b.name));
     if (!items.length) continue;
-    parts.push(sec + '\n' + items.map(r => esc(r.shift) + ' ' + fmt(r.name)).join('\n'));
+    parts.push(sec + '\n' + items.map(r => r.shift + ' ' + tag(r.name)).join('\n'));
   }
   return parts.join('\n\n');
 }
-function buildHourText(g) { return buildHour(g, personText); }
 
 function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -758,18 +596,18 @@ function escapeHtml(s) {
 function render() {
   const oneLoaded = (data1 && !data2) || (!data1 && data2);
   document.getElementById('waiting').style.display = oneLoaded ? 'block' : 'none';
+  if (!data1 || !data2) {
+    document.getElementById('results').style.display = 'none';
+    return;
+  }
   document.getElementById('results').style.display = 'block';
-  const ready = !!(data1 && data2);
-  document.getElementById('pane-main').classList.toggle('locked', !ready);
-  document.getElementById('pane-hourly').classList.toggle('locked', !ready);
-  if (!ready) return;
 
-  lastUnmatched = new Set();
-
-  const mainHtml = buildMain(personHtml);
+  const mainText = buildMainText();
   const todayCount = data1.filter(r => r.start >= 480).length;
   const nextCount = data2.filter(r => r.start < 480).length;
-  document.getElementById('mainOut').innerHTML = mainHtml
+  document.getElementById('mainCount').textContent =
+    todayCount + ' today + ' + nextCount + ' next day';
+  document.getElementById('mainOut').innerHTML = escapeHtml(mainText)
     .replace(/^(SHL|Coach|PT|FT|MED|Next day shifts)$/gm, '<span class="sec">$1</span>');
 
   const groups = buildHourGroups();
@@ -779,24 +617,16 @@ function render() {
   for (const g of groups) {
     const div = document.createElement('div');
     div.className = 'glass-card hourblock';
+    const text = buildHourText(g);
     div.innerHTML =
       '<div class="hourblock-head"><span class="hourblock-time">' + g.time +
       (g.nextDay ? '<small>next day</small>' : '') +
       '<small>' + g.rows.length + (g.rows.length === 1 ? ' person' : ' people') + '</small></span>' +
       '<button class="btn btn-ghost">Copy</button></div>' +
-      '<pre>' + buildHour(g, personHtml).replace(/^(SHL|Coach|PT|FT)$/gm, '<span class="sec">$1</span>') + '</pre>';
-    div.querySelector('button').addEventListener('click', ev => copyText(buildHourText(g), ev.target));
+      '<pre>' + escapeHtml(text).replace(/^(SHL|Coach|PT|FT)$/gm, '<span class="sec">$1</span>') + '</pre>';
+    div.querySelector('button').addEventListener('click', ev => copyText(text, ev.target));
     container.appendChild(div);
   }
-
-  const unmatched = [...lastUnmatched].sort();
-  document.getElementById('mainCount').textContent =
-    todayCount + ' today + ' + nextCount + ' next day' +
-    (unmatched.length ? ' · ' + unmatched.length + ' not in roster' : (roster.length ? ' · all linked' : ''));
-  document.getElementById('unmatchedCard').style.display = unmatched.length ? 'block' : 'none';
-  document.getElementById('unmatchedList').textContent = unmatched.join('\n');
-  const rosterTab = document.getElementById('rosterTab');
-  rosterTab.textContent = unmatched.length ? 'Roster · ' + unmatched.length : 'Roster';
 }
 
 function copyText(text, btn) {
@@ -843,80 +673,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('pane-' + tab.dataset.pane).classList.add('active');
   });
 });
-
-document.getElementById('importClip').addEventListener('click', async e => {
-  const btn = e.currentTarget;
-  try {
-    const clip = await navigator.clipboard.readText();
-    if (!clip.trim()) { flashBtn(btn, 'Clipboard empty'); return; }
-    const ta = document.getElementById('rosterText');
-    // merge: keep existing lines, append clipboard, de-dupe by lowercased content
-    const existing = ta.value.split('\n');
-    const incoming = clip.split('\n');
-    const seen = new Set();
-    const merged = [];
-    for (const line of existing.concat(incoming)) {
-      const t = line.trim();
-      if (!t) continue;
-      const k = t.toLowerCase();
-      if (seen.has(k)) continue;
-      seen.add(k);
-      merged.push(t);
-    }
-    ta.value = merged.join('\n');
-    applyRoster();
-    flashBtn(btn, 'Imported ✦');
-  } catch (err) {
-    flashBtn(btn, 'Clipboard blocked');
-  }
-});
-
-function flashBtn(btn, txt) {
-  const old = btn.textContent;
-  btn.textContent = txt;
-  btn.classList.add('copied');
-  setTimeout(() => { btn.textContent = old; btn.classList.remove('copied'); }, 1300);
-}
-
-document.getElementById('applyRoster').addEventListener('click', e => {
-  applyRoster();
-  const btn = e.currentTarget;
-  const old = btn.textContent;
-  btn.textContent = 'Applied ✦';
-  btn.classList.add('copied');
-  setTimeout(() => { btn.textContent = old; btn.classList.remove('copied'); }, 1200);
-});
-
-document.getElementById('downloadSite').addEventListener('click', () => {
-  const rosterRaw = document.getElementById('rosterText').value;
-  const payload = JSON.stringify({ text: rosterRaw });
-  const updated = PAGE_SOURCE.replace(
-    /(<script type="application\/json" id="roster-data">)[\s\S]*?(<\/script>)/,
-    (m, open, close) => open + '\n' + payload.replace(/</g, '\\u003c') + '\n' + close
-  );
-  const blob = new Blob([updated], { type: 'text/html' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'shift-messages.html';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-});
-
-// load embedded roster on startup
-(function initRoster() {
-  try {
-    const raw = document.getElementById('roster-data').textContent.trim();
-    if (raw && raw !== '[]') {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed.text === 'string') {
-        document.getElementById('rosterText').value = parsed.text;
-      }
-    }
-  } catch (e) { /* empty or malformed roster block, start blank */ }
-  applyRoster();
-})();
 
 [1, 2].forEach(slot => {
   const drop = document.getElementById('drop' + slot);
