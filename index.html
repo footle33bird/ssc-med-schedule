@@ -445,17 +445,37 @@ body::after {
     </div>
   </div>
 
+  <div class="tabs">
+    <button class="tab active" data-pane="template">Template</button>
+    <button class="tab" data-pane="main">Shift Message</button>
+    <button class="tab" data-pane="hourly">Hourly Breakdown</button>
+  </div>
+
+  <div class="pane active" id="pane-template">
+    <div class="glass-card template-card">
+      <div class="template-field">
+        <div class="template-field-label">Opening line <span>· shown before each hour's breakdown</span></div>
+        <textarea class="template-textarea template-line" id="templateHeader" rows="2" placeholder="e.g. გამარჯობათ მეგობრებო :sugrivatoy: Starting at {{time}}"></textarea>
+      </div>
+      <div class="template-field">
+        <div class="template-field-label">Closing line <span>· shown after each hour's breakdown</span></div>
+        <textarea class="template-textarea template-line" id="templateFooter" rows="2" placeholder="e.g. რაიმე ცვლილების შესახებ დაგვიწერეთ :thread_:-ში, არ დაგავიწყდეთ სლექის ნოთიფიქეიშენების ჩართვა, მშვიდი შიფტი! :davidfeet:"></textarea>
+      </div>
+      <div class="template-hint">
+        Set this up before uploading your files. The hourly breakdown itself is always inserted automatically between these two lines — no need to type it. Use <code>{{time}}</code> in the opening line where that hour's start time should go. Whenever either line has text, it's applied to every hour block automatically — no separate switch to flip. Clear both lines to go back to the plain breakdown. Everything here is saved only on this device, so every user can set their own wording.
+      </div>
+      <div class="template-actions">
+        <button class="btn btn-primary" id="saveTemplate">Save Template ✦</button>
+        <button class="btn btn-ghost" id="clearTemplate">Clear</button>
+      </div>
+    </div>
+  </div>
+
   <div class="error" id="error"></div>
   <div class="waiting" id="waiting">✦ Upload both files to generate the messages</div>
 
   <div class="results" id="results">
-    <div class="tabs">
-      <button class="tab active" data-pane="main">Shift Message</button>
-      <button class="tab" data-pane="hourly">Hourly Breakdown</button>
-      <button class="tab" data-pane="template">Template</button>
-    </div>
-
-    <div class="pane active" id="pane-main">
+    <div class="pane" id="pane-main">
       <div class="toolbar">
         <span class="count" id="mainCount"></span>
         <button class="btn btn-primary" id="copyMain">Copy Message ✦</button>
@@ -469,26 +489,6 @@ body::after {
         <button class="btn btn-primary" id="copyHourly">Copy All Hours ✦</button>
       </div>
       <div id="hourlyOut"></div>
-    </div>
-
-    <div class="pane" id="pane-template">
-      <div class="glass-card template-card">
-        <div class="template-field">
-          <div class="template-field-label">Opening line <span>· shown before each hour's breakdown</span></div>
-          <textarea class="template-textarea template-line" id="templateHeader" rows="2" placeholder="e.g. გამარჯობათ მეგობრებო :sugrivatoy: Starting at {{time}}"></textarea>
-        </div>
-        <div class="template-field">
-          <div class="template-field-label">Closing line <span>· shown after each hour's breakdown</span></div>
-          <textarea class="template-textarea template-line" id="templateFooter" rows="2" placeholder="e.g. რაიმე ცვლილების შესახებ დაგვიწერეთ :thread_:-ში, არ დაგავიწყდეთ სლექის ნოთიფიქეიშენების ჩართვა, მშვიდი შიფტი! :davidfeet:"></textarea>
-        </div>
-        <div class="template-hint">
-          The hourly breakdown itself is always inserted automatically between these two lines — no need to type it. Use <code>{{time}}</code> in the opening line where that hour's start time should go. Whenever either line has text, it's applied to every hour block automatically — no separate switch to flip. Clear both lines to go back to the plain breakdown. Everything here is saved only on this device, so every user can set their own wording.
-        </div>
-        <div class="template-actions">
-          <button class="btn btn-primary" id="saveTemplate">Save Template ✦</button>
-          <button class="btn btn-ghost" id="clearTemplate">Clear</button>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -584,6 +584,7 @@ function readFile(file, slot) {
       return;
     }
     hideError();
+    const bothWereLoaded = !!(data1 && data2);
     if (slot === 1) data1 = rows; else data2 = rows;
     const drop = document.getElementById('drop' + slot);
     drop.classList.add('loaded');
@@ -591,6 +592,7 @@ function readFile(file, slot) {
     const kept = slot === 1 ? rows.filter(r => r.start >= 480) : rows.filter(r => r.start < 480);
     drop.querySelector('.drop-stats').textContent = rows.length + ' MED rows · ' + kept.length + ' in window';
     render();
+    if (!bothWereLoaded && data1 && data2) switchTab('hourly');
   };
   reader.readAsArrayBuffer(file);
 }
@@ -790,13 +792,13 @@ document.getElementById('copyHourly').addEventListener('click', e => {
   });
 })();
 
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.pane === name));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + name));
+}
+
 document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('pane-' + tab.dataset.pane).classList.add('active');
-  });
+  tab.addEventListener('click', () => switchTab(tab.dataset.pane));
 });
 
 [1, 2].forEach(slot => {
