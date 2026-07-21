@@ -391,6 +391,16 @@ body::after {
   margin-bottom: 14px;
 }
 .template-toggle input { width: 16px; height: 16px; accent-color: var(--accent); }
+.template-field { margin-bottom: 16px; }
+.template-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.template-field-label span { text-transform: none; font-weight: 300; letter-spacing: 0; opacity: 0.8; }
 .template-textarea {
   display: block;
   width: 100%;
@@ -405,6 +415,7 @@ body::after {
   padding: 16px;
   resize: vertical;
 }
+.template-textarea.template-line { min-height: 0; }
 .template-textarea:focus { outline: none; border-color: var(--accent-border); }
 .template-textarea::placeholder { color: var(--muted); opacity: 0.6; }
 .template-hint { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
@@ -477,19 +488,18 @@ body::after {
       <div class="glass-card template-card">
         <label class="template-toggle">
           <input type="checkbox" id="templateEnabled" />
-          Wrap hourly copies in my template
+          Wrap hourly breakdown in my template
         </label>
-        <textarea class="template-textarea" id="templateText" placeholder="Paste your own message here, e.g.
-
-გამარჯობათ მეგობრებო :sugrivatoy: Starting at {{time}}
-
-
-{{content}}
-
-
-რაიმე ცვლილების შესახებ დაგვიწერეთ :thread_:-ში, არ დაგავიწყდეთ სლექის ნოთიფიქეიშენების ჩართვა, მშვიდი შიფტი! :davidfeet:"></textarea>
+        <div class="template-field">
+          <div class="template-field-label">Opening line <span>· shown before each hour's breakdown</span></div>
+          <textarea class="template-textarea template-line" id="templateHeader" rows="2" placeholder="e.g. გამარჯობათ მეგობრებო :sugrivatoy: Starting at {{time}}"></textarea>
+        </div>
+        <div class="template-field">
+          <div class="template-field-label">Closing line <span>· shown after each hour's breakdown</span></div>
+          <textarea class="template-textarea template-line" id="templateFooter" rows="2" placeholder="e.g. რაიმე ცვლილების შესახებ დაგვიწერეთ :thread_:-ში, არ დაგავიწყდეთ სლექის ნოთიფიქეიშენების ჩართვა, მშვიდი შიფტი! :davidfeet:"></textarea>
+        </div>
         <div class="template-hint">
-          Use <code>{{time}}</code> where that hour's start time should go, and <code>{{content}}</code> where the hourly breakdown itself should be inserted. Every user can write their own wording — this box is saved only on this device. Leave it empty or unchecked to copy the plain breakdown.
+          The hourly breakdown itself is always inserted automatically between these two lines — no need to type it. Use <code>{{time}}</code> in the opening line where that hour's start time should go. Everything here is saved only on this device, so every user can set their own wording.
         </div>
         <div class="template-actions">
           <button class="btn btn-primary" id="saveTemplate">Save Template ✦</button>
@@ -661,15 +671,21 @@ function escapeHtml(s) {
 
 function getTemplate() {
   const enabled = document.getElementById('templateEnabled').checked;
-  const text = document.getElementById('templateText').value;
-  return (enabled && text.trim()) ? text : null;
+  if (!enabled) return null;
+  const header = document.getElementById('templateHeader').value;
+  const footer = document.getElementById('templateFooter').value;
+  if (!header.trim() && !footer.trim()) return null;
+  return { header, footer };
 }
 
-function applyTemplate(tpl, time, content) {
-  return tpl
-    .replace(/\{\{\s*time\s*\}\}/gi, time)
-    .replace(/\{\{\s*content\s*\}\}/gi, content)
-    .replace(/\{\{\s*breakdown\s*\}\}/gi, content);
+function buildTemplatedText(tpl, time, content) {
+  const parts = [];
+  const header = tpl.header.replace(/\{\{\s*time\s*\}\}/gi, time).trim();
+  if (header) parts.push(header);
+  parts.push(content);
+  const footer = tpl.footer.trim();
+  if (footer) parts.push(footer);
+  return parts.join('\n\n\n');
 }
 
 function render() {
@@ -693,21 +709,20 @@ function render() {
   document.getElementById('hourCount').textContent = groups.length + ' start times';
   const container = document.getElementById('hourlyOut');
   container.innerHTML = '';
+  const tpl = getTemplate();
   for (const g of groups) {
     const div = document.createElement('div');
     div.className = 'glass-card hourblock';
-    const text = buildHourText(g);
+    const content = buildHourText(g);
+    const time = g.time + (g.nextDay ? ' (next day)' : '');
+    const displayText = tpl ? buildTemplatedText(tpl, time, content) : content;
     div.innerHTML =
       '<div class="hourblock-head"><span class="hourblock-time">' + g.time +
       (g.nextDay ? '<small>next day</small>' : '') +
       '<small>' + g.rows.length + (g.rows.length === 1 ? ' person' : ' people') + '</small></span>' +
       '<button class="btn btn-ghost">Copy</button></div>' +
-      '<pre>' + escapeHtml(text).replace(/^(SHL|Coach|PT|FT)$/gm, '<span class="sec">$1</span>') + '</pre>';
-    div.querySelector('button').addEventListener('click', ev => {
-      const tpl = getTemplate();
-      const time = g.time + (g.nextDay ? ' (next day)' : '');
-      copyText(tpl ? applyTemplate(tpl, time, text) : text, ev.target);
-    });
+      '<pre>' + escapeHtml(displayText).replace(/^(SHL|Coach|PT|FT)$/gm, '<span class="sec">$1</span>') + '</pre>';
+    div.querySelector('button').addEventListener('click', ev => copyText(displayText, ev.target));
     container.appendChild(div);
   }
 }
@@ -747,33 +762,43 @@ document.getElementById('copyHourly').addEventListener('click', e => {
     .map(g => {
       const time = g.time + (g.nextDay ? ' (next day)' : '');
       const content = buildHourText(g);
-      return tpl ? applyTemplate(tpl, time, content) : time + '\n\n' + content;
+      return tpl ? buildTemplatedText(tpl, time, content) : time + '\n\n' + content;
     })
     .join('\n\n');
   copyText(text, e.currentTarget);
 });
 
 (function initTemplate() {
-  const textEl = document.getElementById('templateText');
+  const headerEl = document.getElementById('templateHeader');
+  const footerEl = document.getElementById('templateFooter');
   const enabledEl = document.getElementById('templateEnabled');
   const saveBtn = document.getElementById('saveTemplate');
   const clearBtn = document.getElementById('clearTemplate');
 
-  const savedText = localStorage.getItem('shiftTemplateText');
+  const DEFAULT_HEADER = 'გამარჯობათ მეგობრებო :sugrivatoy: Starting at {{time}}';
+  const DEFAULT_FOOTER = 'რაიმე ცვლილების შესახებ დაგვიწერეთ :thread_:-ში, არ დაგავიწყდეთ სლექის ნოთიფიქეიშენების ჩართვა, მშვიდი შიფტი! :davidfeet:';
+
+  const savedHeader = localStorage.getItem('shiftTemplateHeader');
+  const savedFooter = localStorage.getItem('shiftTemplateFooter');
   const savedEnabled = localStorage.getItem('shiftTemplateEnabled');
-  if (savedText !== null) textEl.value = savedText;
-  if (savedEnabled !== null) enabledEl.checked = savedEnabled === '1';
+
+  headerEl.value = savedHeader !== null ? savedHeader : DEFAULT_HEADER;
+  footerEl.value = savedFooter !== null ? savedFooter : DEFAULT_FOOTER;
+  enabledEl.checked = savedEnabled === '1';
 
   function persist() {
-    localStorage.setItem('shiftTemplateText', textEl.value);
+    localStorage.setItem('shiftTemplateHeader', headerEl.value);
+    localStorage.setItem('shiftTemplateFooter', footerEl.value);
     localStorage.setItem('shiftTemplateEnabled', enabledEl.checked ? '1' : '0');
   }
 
-  enabledEl.addEventListener('change', persist);
-  textEl.addEventListener('blur', persist);
+  enabledEl.addEventListener('change', () => { persist(); render(); });
+  headerEl.addEventListener('blur', () => { persist(); render(); });
+  footerEl.addEventListener('blur', () => { persist(); render(); });
 
   saveBtn.addEventListener('click', () => {
     persist();
+    render();
     const old = saveBtn.textContent;
     saveBtn.textContent = 'Saved ✦';
     saveBtn.classList.add('copied');
@@ -781,10 +806,13 @@ document.getElementById('copyHourly').addEventListener('click', e => {
   });
 
   clearBtn.addEventListener('click', () => {
-    textEl.value = '';
+    headerEl.value = '';
+    footerEl.value = '';
     enabledEl.checked = false;
-    localStorage.removeItem('shiftTemplateText');
+    localStorage.removeItem('shiftTemplateHeader');
+    localStorage.removeItem('shiftTemplateFooter');
     localStorage.removeItem('shiftTemplateEnabled');
+    render();
   });
 })();
 
