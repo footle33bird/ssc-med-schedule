@@ -376,6 +376,46 @@ body::after {
   word-break: break-word;
   padding: 10px 20px 16px;
 }
+
+.template-card { padding: 24px; }
+.template-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+.template-toggle input { width: 16px; height: 16px; accent-color: var(--accent); }
+.template-textarea {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: "DM Mono", monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  padding: 16px;
+  resize: vertical;
+}
+.template-textarea:focus { outline: none; border-color: var(--accent-border); }
+.template-textarea::placeholder { color: var(--muted); opacity: 0.6; }
+.template-hint { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+.template-hint code {
+  font-family: "DM Mono", monospace;
+  background: var(--surface2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--accent);
+}
+.template-actions { display: flex; gap: 10px; margin-top: 16px; }
 </style>
 </head>
 <body>
@@ -414,6 +454,7 @@ body::after {
     <div class="tabs">
       <button class="tab active" data-pane="main">Shift Message</button>
       <button class="tab" data-pane="hourly">Hourly Breakdown</button>
+      <button class="tab" data-pane="template">Template</button>
     </div>
 
     <div class="pane active" id="pane-main">
@@ -430,6 +471,31 @@ body::after {
         <button class="btn btn-primary" id="copyHourly">Copy All Hours ✦</button>
       </div>
       <div id="hourlyOut"></div>
+    </div>
+
+    <div class="pane" id="pane-template">
+      <div class="glass-card template-card">
+        <label class="template-toggle">
+          <input type="checkbox" id="templateEnabled" />
+          Wrap hourly copies in my template
+        </label>
+        <textarea class="template-textarea" id="templateText" placeholder="Paste your own message here, e.g.
+
+გამარჯობათ მეგობრებო :sugrivatoy: Starting at {{time}}
+
+
+{{content}}
+
+
+რაიმე ცვლილების შესახებ დაგვიწერეთ :thread_:-ში, არ დაგავიწყდეთ სლექის ნოთიფიქეიშენების ჩართვა, მშვიდი შიფტი! :davidfeet:"></textarea>
+        <div class="template-hint">
+          Use <code>{{time}}</code> where that hour's start time should go, and <code>{{content}}</code> where the hourly breakdown itself should be inserted. Every user can write their own wording — this box is saved only on this device. Leave it empty or unchecked to copy the plain breakdown.
+        </div>
+        <div class="template-actions">
+          <button class="btn btn-primary" id="saveTemplate">Save Template ✦</button>
+          <button class="btn btn-ghost" id="clearTemplate">Clear</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -593,6 +659,19 @@ function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function getTemplate() {
+  const enabled = document.getElementById('templateEnabled').checked;
+  const text = document.getElementById('templateText').value;
+  return (enabled && text.trim()) ? text : null;
+}
+
+function applyTemplate(tpl, time, content) {
+  return tpl
+    .replace(/\{\{\s*time\s*\}\}/gi, time)
+    .replace(/\{\{\s*content\s*\}\}/gi, content)
+    .replace(/\{\{\s*breakdown\s*\}\}/gi, content);
+}
+
 function render() {
   const oneLoaded = (data1 && !data2) || (!data1 && data2);
   document.getElementById('waiting').style.display = oneLoaded ? 'block' : 'none';
@@ -624,7 +703,11 @@ function render() {
       '<small>' + g.rows.length + (g.rows.length === 1 ? ' person' : ' people') + '</small></span>' +
       '<button class="btn btn-ghost">Copy</button></div>' +
       '<pre>' + escapeHtml(text).replace(/^(SHL|Coach|PT|FT)$/gm, '<span class="sec">$1</span>') + '</pre>';
-    div.querySelector('button').addEventListener('click', ev => copyText(text, ev.target));
+    div.querySelector('button').addEventListener('click', ev => {
+      const tpl = getTemplate();
+      const time = g.time + (g.nextDay ? ' (next day)' : '');
+      copyText(tpl ? applyTemplate(tpl, time, text) : text, ev.target);
+    });
     container.appendChild(div);
   }
 }
@@ -659,11 +742,51 @@ function copyText(text, btn) {
 
 document.getElementById('copyMain').addEventListener('click', e => copyText(buildMainText(), e.currentTarget));
 document.getElementById('copyHourly').addEventListener('click', e => {
+  const tpl = getTemplate();
   const text = buildHourGroups()
-    .map(g => g.time + (g.nextDay ? ' (next day)' : '') + '\n\n' + buildHourText(g))
+    .map(g => {
+      const time = g.time + (g.nextDay ? ' (next day)' : '');
+      const content = buildHourText(g);
+      return tpl ? applyTemplate(tpl, time, content) : time + '\n\n' + content;
+    })
     .join('\n\n');
   copyText(text, e.currentTarget);
 });
+
+(function initTemplate() {
+  const textEl = document.getElementById('templateText');
+  const enabledEl = document.getElementById('templateEnabled');
+  const saveBtn = document.getElementById('saveTemplate');
+  const clearBtn = document.getElementById('clearTemplate');
+
+  const savedText = localStorage.getItem('shiftTemplateText');
+  const savedEnabled = localStorage.getItem('shiftTemplateEnabled');
+  if (savedText !== null) textEl.value = savedText;
+  if (savedEnabled !== null) enabledEl.checked = savedEnabled === '1';
+
+  function persist() {
+    localStorage.setItem('shiftTemplateText', textEl.value);
+    localStorage.setItem('shiftTemplateEnabled', enabledEl.checked ? '1' : '0');
+  }
+
+  enabledEl.addEventListener('change', persist);
+  textEl.addEventListener('blur', persist);
+
+  saveBtn.addEventListener('click', () => {
+    persist();
+    const old = saveBtn.textContent;
+    saveBtn.textContent = 'Saved ✦';
+    saveBtn.classList.add('copied');
+    setTimeout(() => { saveBtn.textContent = old; saveBtn.classList.remove('copied'); }, 1300);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    textEl.value = '';
+    enabledEl.checked = false;
+    localStorage.removeItem('shiftTemplateText');
+    localStorage.removeItem('shiftTemplateEnabled');
+  });
+})();
 
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
