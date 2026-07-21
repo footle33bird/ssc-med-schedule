@@ -378,19 +378,6 @@ body::after {
 }
 
 .template-card { padding: 24px; }
-.template-toggle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-  cursor: pointer;
-  margin-bottom: 14px;
-}
-.template-toggle input { width: 16px; height: 16px; accent-color: var(--accent); }
 .template-field { margin-bottom: 16px; }
 .template-field-label {
   font-size: 10px;
@@ -486,10 +473,6 @@ body::after {
 
     <div class="pane" id="pane-template">
       <div class="glass-card template-card">
-        <label class="template-toggle">
-          <input type="checkbox" id="templateEnabled" />
-          Wrap hourly breakdown in my template
-        </label>
         <div class="template-field">
           <div class="template-field-label">Opening line <span>· shown before each hour's breakdown</span></div>
           <textarea class="template-textarea template-line" id="templateHeader" rows="2" placeholder="e.g. გამარჯობათ მეგობრებო :sugrivatoy: Starting at {{time}}"></textarea>
@@ -499,7 +482,7 @@ body::after {
           <textarea class="template-textarea template-line" id="templateFooter" rows="2" placeholder="e.g. რაიმე ცვლილების შესახებ დაგვიწერეთ :thread_:-ში, არ დაგავიწყდეთ სლექის ნოთიფიქეიშენების ჩართვა, მშვიდი შიფტი! :davidfeet:"></textarea>
         </div>
         <div class="template-hint">
-          The hourly breakdown itself is always inserted automatically between these two lines — no need to type it. Use <code>{{time}}</code> in the opening line where that hour's start time should go. Everything here is saved only on this device, so every user can set their own wording.
+          The hourly breakdown itself is always inserted automatically between these two lines — no need to type it. Use <code>{{time}}</code> in the opening line where that hour's start time should go. Whenever either line has text, it's applied to every hour block automatically — no separate switch to flip. Clear both lines to go back to the plain breakdown. Everything here is saved only on this device, so every user can set their own wording.
         </div>
         <div class="template-actions">
           <button class="btn btn-primary" id="saveTemplate">Save Template ✦</button>
@@ -670,8 +653,6 @@ function escapeHtml(s) {
 }
 
 function getTemplate() {
-  const enabled = document.getElementById('templateEnabled').checked;
-  if (!enabled) return null;
   const header = document.getElementById('templateHeader').value;
   const footer = document.getElementById('templateFooter').value;
   if (!header.trim() && !footer.trim()) return null;
@@ -771,7 +752,6 @@ document.getElementById('copyHourly').addEventListener('click', e => {
 (function initTemplate() {
   const headerEl = document.getElementById('templateHeader');
   const footerEl = document.getElementById('templateFooter');
-  const enabledEl = document.getElementById('templateEnabled');
   const saveBtn = document.getElementById('saveTemplate');
   const clearBtn = document.getElementById('clearTemplate');
 
@@ -780,21 +760,17 @@ document.getElementById('copyHourly').addEventListener('click', e => {
 
   const savedHeader = localStorage.getItem('shiftTemplateHeader');
   const savedFooter = localStorage.getItem('shiftTemplateFooter');
-  const savedEnabled = localStorage.getItem('shiftTemplateEnabled');
 
   headerEl.value = savedHeader !== null ? savedHeader : DEFAULT_HEADER;
   footerEl.value = savedFooter !== null ? savedFooter : DEFAULT_FOOTER;
-  enabledEl.checked = savedEnabled === '1';
 
   function persist() {
     localStorage.setItem('shiftTemplateHeader', headerEl.value);
     localStorage.setItem('shiftTemplateFooter', footerEl.value);
-    localStorage.setItem('shiftTemplateEnabled', enabledEl.checked ? '1' : '0');
   }
 
-  enabledEl.addEventListener('change', () => { persist(); render(); });
-  headerEl.addEventListener('blur', () => { persist(); render(); });
-  footerEl.addEventListener('blur', () => { persist(); render(); });
+  headerEl.addEventListener('input', () => { persist(); render(); });
+  footerEl.addEventListener('input', () => { persist(); render(); });
 
   saveBtn.addEventListener('click', () => {
     persist();
@@ -808,10 +784,8 @@ document.getElementById('copyHourly').addEventListener('click', e => {
   clearBtn.addEventListener('click', () => {
     headerEl.value = '';
     footerEl.value = '';
-    enabledEl.checked = false;
     localStorage.removeItem('shiftTemplateHeader');
     localStorage.removeItem('shiftTemplateFooter');
-    localStorage.removeItem('shiftTemplateEnabled');
     render();
   });
 })();
