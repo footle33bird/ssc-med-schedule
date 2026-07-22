@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shift Messages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,600;0,700;0,800;1,700;1,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --surface: rgba(32, 29, 26, 0.5);
+  --surface2: rgba(52, 47, 41, 0.55);
+  --border: rgba(255, 255, 255, 0.12);
+  --border2: rgba(255, 255, 255, 0.2);
+  --text: #f0ede8;
+  --muted: rgba(240, 237, 232, 0.5);
+  --accent: #c8a96e;
+  --accent-dim: rgba(200, 169, 110, 0.14);
+  --accent-border: rgba(200, 169, 110, 0.32);
+  --accent-text: #0a0a0a;
+  --success: #6ec88a;
+  --danger: #e06060;
+  --glass-blur: blur(20px) saturate(180%);
+  --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0) 40%);
+  --canvas: radial-gradient(125% 125% at 0% 0%, #100e0c 0%, #0a0908 55%, #070707 100%);
+  --aurora-1: rgba(200, 169, 110, 0.22);
+  --aurora-2: rgba(70, 150, 160, 0.16);
+  --aurora-3: rgba(150, 110, 200, 0.16);
+}
+[data-theme="light"] {
+  --bg: #eae7f0;
+  --surface: rgba(255, 255, 255, 0.4);
+  --surface2: rgba(255, 255, 255, 0.55);
+  --border: rgba(60, 50, 70, 0.12);
+  --border2: rgba(60, 50, 70, 0.2);
+  --text: #1a1814;
+  --muted: rgba(26, 24, 20, 0.55);
+  --accent: #9e7a3f;
+  --accent-dim: rgba(158, 122, 63, 0.12);
+  --accent-border: rgba(158, 122, 63, 0.4);
+  --accent-text: #ffffff;
+  --success: #27704a;
+  --danger: #c0392b;
+  --glass-blur: blur(22px) saturate(165%);
+  --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(60, 50, 70, 0.05);
+  --glass-shadow: 0 12px 34px rgba(70, 60, 90, 0.2);
+  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,0.65), rgba(255,255,255,0.05) 44%);
+  --canvas: radial-gradient(125% 125% at 0% 0%, #e3e0ef 0%, #efe9e3 48%, #ece2ec 100%);
+  --aurora-1: rgba(225, 178, 95, 0.5);
+  --aurora-2: rgba(95, 170, 205, 0.42);
+  --aurora-3: rgba(180, 135, 215, 0.4);
+}
+
+html { font-size: 16px; }
+body {
+  background: var(--canvas, var(--bg));
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: "Nunito", sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+  opacity: 0.5;
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: -15%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 38% at 18% 22%, var(--aurora-1), transparent 70%),
+    radial-gradient(42% 42% at 82% 18%, var(--aurora-2), transparent 70%),
+    radial-gradient(46% 46% at 65% 88%, var(--aurora-3), transparent 72%);
+  filter: blur(48px);
+  animation: auroraDrift 26s ease-in-out infinite alternate;
+}
+@keyframes auroraDrift {
+  0% { transform: translate3d(-2%, 0, 0) scale(1); }
+  100% { transform: translate3d(2%, -5%, 0) scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::after { animation: none; }
+  .step-anim { animation: none !important; }
+}
+
+.app { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; position: relative; z-index: 1; }
+
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 100px;
+  width: 38px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--muted);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-hi);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.theme-toggle:hover { border-color: var(--accent-border); color: var(--accent); }
+.theme-toggle:active { transform: scale(0.95); }
+
+.header { text-align: center; margin-bottom: 44px; }
+.header-eyebrow {
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.header-title {
+  font-size: 48px;
+  font-weight: 800;
+  font-style: italic;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.header-subtitle {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+.step-anim { animation: fadeUp 0.35s ease; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.uploads { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+@media (max-width: 640px) { .uploads { grid-template-columns: 1fr; } }
+
+.drop {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 20px;
+  border: 1px dashed var(--border2);
+  border-radius: 12px;
+  background: var(--surface);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-hi), var(--glass-shadow);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.drop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--glass-sheen);
+  pointer-events: none;
+}
+.drop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent-dim);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.drop:hover, .drop.over { border-color: var(--accent-border); }
+.drop:hover::after, .drop.over::after { opacity: 0.6; }
+.drop.loaded { border-style: solid; border-color: var(--accent-border); background: var(--surface2); }
+.drop.loaded::after { opacity: 1; }
+.drop > * { position: relative; z-index: 1; }
+.drop input { display: none; }
+
+.drop-badge {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 8px;
+}
+.drop-label {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.drop-hint { font-size: 11px; color: var(--muted); opacity: 0.7; margin-top: 6px; font-weight: 300; }
+.drop-file {
+  font-family: "DM Mono", monospace;
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 10px;
+  word-break: break-all;
+  display: none;
+}
+.drop-stats { font-size: 11px; color: var(--success); margin-top: 4px; font-weight: 600; display: none; }
+.drop.loaded .drop-file, .drop.loaded .drop-stats { display: block; }
+
+/* ── Member-sheet link bar + options ── */
+.sheetbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-hi);
+}
+.sheet-status { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; line-height: 1.5; }
+.sheet-status.ok { color: var(--success); }
+.sheet-status.err { color: var(--danger); }
+.sheet-status small { display: block; margin-top: 3px; font-weight: 400; opacity: 0.8; font-family: "DM Mono", monospace; font-size: 10.5px; }
+.opts { display: flex; flex-wrap: wrap; gap: 18px; }
+.optgroup { display: flex; align-items: center; gap: 8px; }
+.optlabel { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.seg { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 100px; background: var(--surface2); }
+.opt {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  padding: 6px 12px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.opt:hover { color: var(--text); }
+.opt.active { background: var(--accent); color: var(--accent-text); }
+.hidden-note { font-size: 11px; color: var(--muted); margin-top: 10px; font-weight: 400; line-height: 1.5; opacity: 0.85; }
+
+.error {
+  display: none;
+  padding: 13px 18px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.waiting {
+  display: none;
+  text-align: center;
+  padding: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.results { display: none; }
+
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: var(--surface);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  margin-bottom: 18px;
+}
+.tab {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 9px 20px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--accent); color: var(--accent-text); }
+
+.pane { display: none; }
+.pane.active { display: block; animation: fadeUp 0.35s ease; }
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.count { font-size: 12px; color: var(--muted); font-weight: 300; letter-spacing: 0.02em; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 26px;
+  border-radius: 6px;
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid;
+}
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn-primary:hover { opacity: 0.88; transform: translateY(-2px); }
+.btn:active { transform: translateY(0) scale(0.97); }
+.btn.copied { background: var(--success); border-color: var(--success); color: #fff; }
+.btn.failed { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border2);
+  color: var(--muted);
+  padding: 7px 16px;
+  font-size: 10px;
+}
+.btn-ghost:hover { color: var(--text); border-color: var(--accent-border); }
+.btn-ghost.copied { border-color: var(--success); color: var(--success); background: transparent; }
+.btn-ghost.failed { border-color: var(--danger); color: var(--danger); background: transparent; }
+
+.glass-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-hi), var(--glass-shadow);
+}
+.glass-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--glass-sheen);
+  pointer-events: none;
+}
+.glass-card > * { position: relative; z-index: 1; }
+
+.output {
+  padding: 22px 24px;
+  font-family: "DM Mono", monospace;
+  font-size: 12.5px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.output .sec, .hourblock .sec { color: var(--accent); font-weight: 500; }
+.output .warn, .hourblock .warn { color: var(--danger); font-weight: 500; }
+
+.hourblock { margin-bottom: 12px; }
+.hourblock-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px 0;
+}
+.hourblock-time {
+  font-family: "DM Mono", monospace;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.hourblock-time small {
+  font-family: "Nunito", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-left: 10px;
+}
+.hourblock pre {
+  font-family: "DM Mono", monospace;
+  font-size: 12px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 10px 20px 16px;
+}
+
+.template-card { padding: 24px; }
+.template-field { margin-bottom: 16px; }
+.template-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.template-field-label span { text-transform: none; font-weight: 300; letter-spacing: 0; opacity: 0.8; }
+.template-textarea {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: "DM Mono", monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  padding: 16px;
+  resize: vertical;
+}
+.template-textarea.template-line { min-height: 0; }
+.template-textarea:focus { outline: none; border-color: var(--accent-border); }
+.template-textarea::placeholder { color: var(--muted); opacity: 0.6; }
+.template-hint { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+.template-hint code {
+  font-family: "DM Mono", monospace;
+  background: var(--surface2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--accent);
+}
+.template-actions { display: flex; gap: 10px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="themeBtn" title="Switch theme" aria-label="Switch theme"><span id="themeIcon">☀️</span></button>
+
+<div class="app">
+  <header class="header step-anim">
+    <div class="header-eyebrow">✦ MED Coverage</div>
+    <h1 class="header-title">Shift Messages</h1>
+    <div class="header-subtitle">Automatic · Filtered · Copy-ready</div>
+  </header>
+
+  <div class="uploads step-anim">
+    <div class="drop" id="drop1">
+      <span class="drop-badge">01</span>
+      <div class="drop-label">Today's Schedule</div>
+      <div class="drop-hint">Shifts from 08:00 onward · click or drop the .xlsx</div>
+      <div class="drop-file"></div>
+      <div class="drop-stats"></div>
+      <input type="file" accept=".xlsx,.xls" />
+    </div>
+    <div class="drop" id="drop2">
+      <span class="drop-badge">02</span>
+      <div class="drop-label">Next Day's Schedule</div>
+      <div class="drop-hint">Shifts 00:00 – 07:00, 07:00 included · click or drop the .xlsx</div>
+      <div class="drop-file"></div>
+      <div class="drop-stats"></div>
+      <input type="file" accept=".xlsx,.xls" />
+    </div>
+  </div>
+
+  <div class="sheetbar step-anim">
+    <div class="opts">
+      <div class="optgroup">
+        <span class="optlabel">Show people as</span>
+        <div class="seg" id="optOutput">
+          <button class="opt" data-v="names" title="Readable @First_Last names">Names</button>
+          <button class="opt" data-v="tags" title="Slack profile-link tags, resolved from the Google Sheet — paste into Slack to mention people">Tags</button>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-status" id="sheetStatus">Loading member sheet…</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-pane="template">Template</button>
+    <button class="tab" data-pane="main">Shift Message</button>
+    <button class="tab" data-pane="hourly">Hourly Breakdown</button>
+  </div>
+
+  <div class="pane active" id="pane-template">
+    <div class="glass-card template-card">
+      <div class="template-field">
+        <div class="template-field-label">Opening line <span>· shown before each hour's breakdown</span></div>
+        <textarea class="template-textarea template-line" id="templateHeader" rows="2" placeholder="e.g. გამარჯობათ მეგობრებო :sugrivatoy: Starting at {{time}}"></textarea>
+      </div>
+      <div class="template-field">
+        <div class="template-field-label">Closing line <span>· shown after each hour's breakdown</span></div>
+        <textarea class="template-textarea template-line" id="templateFooter" rows="2" placeholder="e.g. რაიმე ცვლილების შესახებ დაგვიწერეთ :thread_:-ში, არ დაგავიწყდეთ სლექის ნოთიფიქეიშენების ჩართვა, მშვიდი შიფტი! :davidfeet:"></textarea>
+      </div>
+      <div class="template-hint">
+        Set this up before uploading your files. The hourly breakdown itself is always inserted automatically between these two lines — no need to type it. Use <code>{{time}}</code> in the opening line where that hour's start time should go. Whenever either line has text, it's applied to every hour block automatically — no separate switch to flip. Clear both lines to go back to the plain breakdown. Everything here is saved only on this device, so every user can set their own wording.
+      </div>
+      <div class="template-actions">
+        <button class="btn btn-primary" id="saveTemplate">Save Template ✦</button>
+        <button class="btn btn-ghost" id="clearTemplate">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="error" id="error"></div>
+  <div class="waiting" id="waiting">✦ Upload both files to generate the messages</div>
+
+  <div class="results" id="results">
+    <div class="pane" id="pane-main">
+      <div class="toolbar">
+        <span class="count" id="mainCount"></span>
+        <button class="btn btn-primary" id="copyMain">Copy Message ✦</button>
+      </div>
+      <div class="glass-card"><div class="output" id="mainOut"></div></div>
+      <div class="hidden-note" id="hiddenNote"></div>
+    </div>
+
+    <div class="pane" id="pane-hourly">
+      <div class="toolbar">
+        <span class="count" id="hourCount"></span>
+        <button class="btn btn-primary" id="copyHourly">Copy All Hours ✦</button>
+      </div>
+      <div id="hourlyOut"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════ MEMBER SHEET LINK ═══════════════
+   Reads the Slack member list (name → handle + Slack ID) from your Google Sheet
+   via the Apps Script web app, so the messages use real Slack handles / @mentions.
+   If it can't be reached, the site silently falls back to plain @Name tags. */
+const SHEET_URL = "https://script.google.com/a/macros/wolt.com/s/AKfycbzq6FcraHjd5fpZP2In4zkPJN3fS34RyKDA8MXiZkzabeBiM_iEG-xtGTZ7SWiT1LazNQ/exec";
+/* Tip: if the JSONP link above is ever blocked, publish the "Lookup" tab to the web
+   as CSV (File → Share → Publish to web → Lookup → CSV) and paste that URL here instead —
+   the site auto-detects a ...output=csv link and reads it directly. */
+
+/* Base for "Copy link to profile" URLs — pasting one into Slack becomes a real @mention. */
+const PROFILE_BASE = "https://wolt.enterprise.slack.com/team/";
+
+const CATEGORIES = {
+  'SSC - SHL - MED': 'SHL',
+  'SSC - MED - COACH': 'Coach',
+  'SSC - MED - PT': 'PT',
+  'SSC - MED': 'FT'
+};
+const SECTION_ORDER = ['SHL', 'Coach', 'PT', 'FT'];
+
+let data1 = null;
+let data2 = null;
+let theme = 'dark';
+
+let memberIndex = new Map();   // normKey(name) → { handle, id, name }
+let sheetLoaded = false;
+let outputMode = localStorage.getItem('outputMode') || 'names';        // 'names' | 'tags'
+
+document.getElementById('themeBtn').addEventListener('click', () => {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeIcon').textContent = theme === 'dark' ? '☀️' : '🌙';
+});
+
+function norm(s) {
+  return String(s || '').replace(/\s+/g, ' ').trim();
+}
+
+/* Matching key: lowercase, strip accents, collapse spaces. */
+function normKey(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .split('').filter(function (ch) { var c = ch.charCodeAt(0); return c < 0x300 || c > 0x36f; }).join('')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function underscoreTag(name) {
+  return '@' + name.replace(/ /g, '_');
+}
+
+/* Two output modes (toggle under the upload boxes):
+   • 'names' — readable @First_Last (default). Turn these into real Slack tags later
+     with the userscript's "Tag & copy" or "Post".
+   • 'tags'  — resolve each person to their Slack profile link via the Google Sheet;
+     pasting one of those into Slack becomes a real @mention. Anyone not in the sheet
+     falls back to their @First_Last name. */
+function mention(name, forCopy) {
+  if (outputMode === 'tags' && sheetLoaded) {
+    const m = memberIndex.get(normKey(name));
+    if (m && m.id) return PROFILE_BASE + m.id;
+  }
+  return underscoreTag(name);
+}
+
+function isShown(r) {
+  return true;
+}
+
+function parseStart(shift) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(shift).trim());
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+function parseWorkbook(arrayBuffer) {
+  const wb = XLSX.read(arrayBuffer, { type: 'array' });
+  const names = wb.SheetNames.slice().sort((a, b) => {
+    const pa = /ssc support/i.test(a) ? 0 : 1;
+    const pb = /ssc support/i.test(b) ? 0 : 1;
+    return pa - pb;
+  });
+  for (const name of names) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: null });
+    let hIdx = -1, typeCol = -1, shiftCol = -1;
+    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+      const r = rows[i] || [];
+      for (let c = 0; c < r.length; c++) {
+        if (norm(r[c]).toUpperCase() === 'SHIFT TYPE') { hIdx = i; typeCol = c; break; }
+      }
+      if (hIdx >= 0) {
+        const r2 = rows[hIdx];
+        for (let c = 0; c < r2.length; c++) {
+          if (norm(r2[c]).toUpperCase() === 'SHIFT') { shiftCol = c; break; }
+        }
+        break;
+      }
+    }
+    if (hIdx < 0 || shiftCol < 0) continue;
+    const nameCol = typeCol + 1;
+    const out = [];
+    for (let i = hIdx + 1; i < rows.length; i++) {
+      const r = rows[i] || [];
+      const type = norm(r[typeCol]).toUpperCase();
+      const cat = CATEGORIES[type];
+      if (!cat) continue;
+      const person = norm(r[nameCol]);
+      const shift = norm(r[shiftCol]);
+      if (!person || !shift) continue;
+      const start = parseStart(shift);
+      if (start === null) continue;
+      out.push({ cat, name: person, shift, start });
+    }
+    return out;
+  }
+  return null;
+}
+
+function readFile(file, slot) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    let rows;
+    try {
+      rows = parseWorkbook(e.target.result);
+    } catch (err) {
+      showError('Could not read "' + file.name + '". Make sure it is the daily schedule .xlsx export.');
+      return;
+    }
+    if (rows === null) {
+      showError('No "SHIFT TYPE" header found in "' + file.name + '". This does not look like the daily schedule file.');
+      return;
+    }
+    hideError();
+    const bothWereLoaded = !!(data1 && data2);
+    if (slot === 1) data1 = rows; else data2 = rows;
+    const drop = document.getElementById('drop' + slot);
+    drop.classList.add('loaded');
+    drop.querySelector('.drop-file').textContent = file.name;
+    const kept = slot === 1 ? rows.filter(r => r.start >= 480) : rows.filter(r => r.start < 480);
+    drop.querySelector('.drop-stats').textContent = rows.length + ' MED rows · ' + kept.length + ' in window';
+    render();
+    if (!bothWereLoaded && data1 && data2) switchTab('hourly');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showError(msg) {
+  const el = document.getElementById('error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('error').style.display = 'none';
+}
+
+function sortRows(rows) {
+  return rows.slice().sort((a, b) => a.start - b.start || a.name.localeCompare(b.name));
+}
+
+function buildMainText(forCopy) {
+  const today = sortRows((data1 || []).filter(r => r.start >= 480));
+  const parts = [];
+  for (const sec of SECTION_ORDER) {
+    const items = today.filter(r => r.cat === sec)
+      .map(r => { const mt = mention(r.name, forCopy); return mt === null ? null : (r.shift + ' ' + mt); })
+      .filter(x => x !== null);
+    if (!items.length) continue;
+    parts.push(sec + '\n\n' + items.join('\n'));
+  }
+  if (data2) {
+    const next = sortRows(data2.filter(r => r.start < 480))
+      .map(r => { const mt = mention(r.name, forCopy); return mt === null ? null : (r.shift + ' ' + mt); })
+      .filter(x => x !== null);
+    if (next.length) {
+      parts.push('Next day shifts\n\nMED\n\n' + next.join('\n'));
+    }
+  }
+  return parts.join('\n\n');
+}
+
+function buildHourGroups() {
+  const today = sortRows((data1 || []).filter(r => r.start >= 480)).map(r => ({ ...r, sortKey: r.start }));
+  const next = data2 ? sortRows(data2.filter(r => r.start < 480)).map(r => ({ ...r, sortKey: r.start + 1440, nextDay: true })) : [];
+  const all = today.concat(next);
+  const groups = new Map();
+  for (const r of all) {
+    const key = r.sortKey + '|' + r.shift.split('-')[0];
+    if (!groups.has(key)) groups.set(key, { time: r.shift.split('-')[0], sortKey: r.sortKey, nextDay: !!r.nextDay, rows: [] });
+    groups.get(key).rows.push(r);
+  }
+  return [...groups.values()].sort((a, b) => a.sortKey - b.sortKey);
+}
+
+function buildHourText(g, forCopy) {
+  const parts = [];
+  for (const sec of SECTION_ORDER) {
+    const items = g.rows.filter(r => r.cat === sec).sort((a, b) => a.name.localeCompare(b.name))
+      .map(r => { const mt = mention(r.name, forCopy); return mt === null ? null : (r.shift + ' ' + mt); })
+      .filter(x => x !== null);
+    if (!items.length) continue;
+    parts.push(sec + '\n' + items.join('\n'));
+  }
+  return parts.join('\n\n');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* Highlight section headers + the ⚠️ marker in the preview. */
+function highlight(html) {
+  return html
+    .replace(/^(SHL|Coach|PT|FT|MED|Next day shifts)$/gm, '<span class="sec">$1</span>')
+    .replace(/⚠️/g, '<span class="warn">⚠️</span>');
+}
+
+function getTemplate() {
+  const header = document.getElementById('templateHeader').value;
+  const footer = document.getElementById('templateFooter').value;
+  if (!header.trim() && !footer.trim()) return null;
+  return { header, footer };
+}
+
+function buildTemplatedText(tpl, time, content) {
+  const parts = [];
+  const header = tpl.header.replace(/\{\{\s*time\s*\}\}/gi, time).trim();
+  if (header) parts.push(header);
+  parts.push(content);
+  const footer = tpl.footer.trim();
+  if (footer) parts.push(footer);
+  return parts.join('\n\n\n');
+}
+
+function render() {
+  const oneLoaded = (data1 && !data2) || (!data1 && data2);
+  document.getElementById('waiting').style.display = oneLoaded ? 'block' : 'none';
+  if (!data1 || !data2) {
+    document.getElementById('results').style.display = 'none';
+    return;
+  }
+  document.getElementById('results').style.display = 'block';
+
+  const mainText = buildMainText(false);
+  const todayRows = data1.filter(r => r.start >= 480);
+  const nextRows = data2.filter(r => r.start < 480);
+  const todayShown = todayRows.filter(isShown).length;
+  const nextShown = nextRows.filter(isShown).length;
+  document.getElementById('mainCount').textContent =
+    todayShown + ' today + ' + nextShown + ' next day';
+  document.getElementById('mainOut').innerHTML = highlight(escapeHtml(mainText));
+
+  // In Tags mode, note anyone not in the sheet (they fall back to their @name)
+  const noteEl = document.getElementById('hiddenNote');
+  if (sheetLoaded && outputMode === 'tags') {
+    const unmatched = [...new Set(
+      todayRows.concat(nextRows).filter(r => !memberIndex.has(normKey(r.name))).map(r => r.name)
+    )];
+    noteEl.textContent = unmatched.length
+      ? '⚠️ ' + unmatched.length + ' not in sheet — shown as names, not tags: ' + unmatched.join(', ')
+      : '';
+  } else {
+    noteEl.textContent = '';
+  }
+
+  const groups = buildHourGroups();
+  const container = document.getElementById('hourlyOut');
+  container.innerHTML = '';
+  const tpl = getTemplate();
+  let blockCount = 0;
+  for (const g of groups) {
+    const contentDisp = buildHourText(g, false);
+    if (!contentDisp) continue; // every person in this hour was hidden
+    blockCount++;
+    const contentCopy = buildHourText(g, true);
+    const time = g.time + (g.nextDay ? ' (next day)' : '');
+    const displayText = tpl ? buildTemplatedText(tpl, time, contentDisp) : contentDisp;
+    const copyStr = tpl ? buildTemplatedText(tpl, time, contentCopy) : contentCopy;
+    const shownCount = g.rows.filter(isShown).length;
+    const div = document.createElement('div');
+    div.className = 'glass-card hourblock';
+    div.innerHTML =
+      '<div class="hourblock-head"><span class="hourblock-time">' + g.time +
+      (g.nextDay ? '<small>next day</small>' : '') +
+      '<small>' + shownCount + (shownCount === 1 ? ' person' : ' people') + '</small></span>' +
+      '<button class="btn btn-ghost">Copy</button></div>' +
+      '<pre>' + highlight(escapeHtml(displayText)) + '</pre>';
+    div.querySelector('button').addEventListener('click', ev => copyText(copyStr, ev.target));
+    container.appendChild(div);
+  }
+  document.getElementById('hourCount').textContent = blockCount + ' start times';
+}
+
+function copyText(text, btn) {
+  function done(ok) {
+    const old = btn.textContent;
+    btn.textContent = ok ? 'Copied ✦' : 'Copy failed';
+    btn.classList.add(ok ? 'copied' : 'failed');
+    setTimeout(() => { btn.textContent = old; btn.classList.remove('copied', 'failed'); }, 1500);
+  }
+  function fallback() {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    done(ok);
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => done(true)).catch(fallback);
+  } else {
+    fallback();
+  }
+}
+
+document.getElementById('copyMain').addEventListener('click', e => copyText(buildMainText(true), e.currentTarget));
+document.getElementById('copyHourly').addEventListener('click', e => {
+  const tpl = getTemplate();
+  const text = buildHourGroups()
+    .map(g => {
+      const content = buildHourText(g, true);
+      if (!content) return null;
+      const time = g.time + (g.nextDay ? ' (next day)' : '');
+      return tpl ? buildTemplatedText(tpl, time, content) : time + '\n\n' + content;
+    })
+    .filter(x => x !== null)
+    .join('\n\n');
+  copyText(text, e.currentTarget);
+});
+
+/* ─────────────── Options (mention style / unmatched handling) ─────────────── */
+function setupSeg(id, current, onChange) {
+  const box = document.getElementById(id);
+  box.querySelectorAll('.opt').forEach(b => {
+    b.classList.toggle('active', b.dataset.v === current);
+    b.addEventListener('click', () => {
+      box.querySelectorAll('.opt').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      onChange(b.dataset.v);
+    });
+  });
+}
+setupSeg('optOutput', outputMode, v => { outputMode = v; localStorage.setItem('outputMode', v); render(); });
+
+function setStatus(text, cls) {
+  const el = document.getElementById('sheetStatus');
+  if (!el) return;
+  el.innerHTML = text;
+  el.className = 'sheet-status' + (cls ? ' ' + cls : '');
+}
+
+function applyMembers(data) {
+  const members = (data && data.members) || [];
+  memberIndex = new Map();
+  for (const m of members) {
+    const key = normKey(m.name);
+    if (!key) continue;
+    if (!memberIndex.has(key)) {
+      memberIndex.set(key, {
+        handle: String(m.handle || '').replace(/^@/, ''),
+        id: String(m.id || ''),
+        name: m.name
+      });
+    }
+  }
+  sheetLoaded = memberIndex.size > 0;
+  if (sheetLoaded) {
+    const upd = data && data.updated ? ' · synced ' + data.updated : '';
+    setStatus('✦ ' + memberIndex.size + ' members linked from sheet' + upd, 'ok');
+  } else {
+    setStatus('Member sheet reachable but empty — run the Slack sync first.', 'err');
+  }
+  render();
+}
+
+function loadJSONP(url) {
+  return new Promise((resolve, reject) => {
+    const cb = '__shiftSheet_' + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    const to = setTimeout(() => { cleanup(); reject(new Error('timed out reaching the sheet')); }, 15000);
+    function cleanup() { try { delete window[cb]; } catch (e) { window[cb] = undefined; } s.remove(); clearTimeout(to); }
+    window[cb] = data => { cleanup(); resolve(data); };
+    s.onerror = () => { cleanup(); reject(new Error('could not load the sheet endpoint')); };
+    s.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cb + '&t=' + Date.now();
+    document.head.appendChild(s);
+  });
+}
+
+function parseCSV(text) {
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else {
+      if (c === '"') q = true;
+      else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+      else if (c === '\r') { /* skip */ }
+      else cur += c;
+    }
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => !(r.length === 1 && r[0] === ''));
+}
+
+function loadCSV(url) {
+  return fetch(url, { cache: 'no-store' })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(txt => {
+      const rows = parseCSV(txt);
+      if (!rows.length) return { members: [] };
+      const head = rows[0].map(h => h.toLowerCase().trim());
+      const iN = head.indexOf('name');
+      const iH = head.indexOf('handle');
+      const iId = head.findIndex(h => h.replace(/\s/g, '') === 'slackid');
+      const iG = head.indexOf('group');
+      const members = rows.slice(1)
+        .filter(r => r[iN])
+        .map(r => ({ name: r[iN], handle: iH >= 0 ? r[iH] : '', id: iId >= 0 ? r[iId] : '', group: iG >= 0 ? r[iG] : '' }));
+      return { members };
+    });
+}
+
+function loadSheetData() {
+  if (!SHEET_URL || /PASTE_/.test(SHEET_URL)) {
+    setStatus('No member sheet linked — using plain @Name tags.', 'err');
+    return;
+  }
+  setStatus('Linking to member sheet…');
+  const loader = /output=csv/i.test(SHEET_URL) ? loadCSV(SHEET_URL) : loadJSONP(SHEET_URL);
+  loader.then(applyMembers).catch(err => {
+    sheetLoaded = false;
+    setStatus('⚠ Member sheet not linked — using plain @Name tags.<small>' + escapeHtml(String(err && err.message || err)) + '</small>', 'err');
+    render();
+  });
+}
+
+(function initTemplate() {
+  const headerEl = document.getElementById('templateHeader');
+  const footerEl = document.getElementById('templateFooter');
+  const saveBtn = document.getElementById('saveTemplate');
+  const clearBtn = document.getElementById('clearTemplate');
+
+  const DEFAULT_HEADER = 'გამარჯობათ მეგობრებო :sugrivatoy: Starting at {{time}}';
+  const DEFAULT_FOOTER = 'რაიმე ცვლილების შესახებ დაგვიწერეთ :thread_:-ში, არ დაგავიწყდეთ სლექის ნოთიფიქეიშენების ჩართვა, მშვიდი შიფტი! :davidfeet:';
+
+  const savedHeader = localStorage.getItem('shiftTemplateHeader');
+  const savedFooter = localStorage.getItem('shiftTemplateFooter');
+
+  headerEl.value = savedHeader !== null ? savedHeader : DEFAULT_HEADER;
+  footerEl.value = savedFooter !== null ? savedFooter : DEFAULT_FOOTER;
+
+  function persist() {
+    localStorage.setItem('shiftTemplateHeader', headerEl.value);
+    localStorage.setItem('shiftTemplateFooter', footerEl.value);
+  }
+
+  headerEl.addEventListener('input', () => { persist(); render(); });
+  footerEl.addEventListener('input', () => { persist(); render(); });
+
+  saveBtn.addEventListener('click', () => {
+    persist();
+    render();
+    const old = saveBtn.textContent;
+    saveBtn.textContent = 'Saved ✦';
+    saveBtn.classList.add('copied');
+    setTimeout(() => { saveBtn.textContent = old; saveBtn.classList.remove('copied'); }, 1300);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    headerEl.value = '';
+    footerEl.value = '';
+    localStorage.removeItem('shiftTemplateHeader');
+    localStorage.removeItem('shiftTemplateFooter');
+    render();
+  });
+})();
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.pane === name));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + name));
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.pane));
+});
+
+[1, 2].forEach(slot => {
+  const drop = document.getElementById('drop' + slot);
+  const input = drop.querySelector('input');
+  drop.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => { if (input.files[0]) readFile(input.files[0], slot); });
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('over');
+    if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0], slot);
+  });
+});
+
+loadSheetData(); // fetch name → Slack-ID map so "Tags" mode works
+</script>
+</body>
+</html>
